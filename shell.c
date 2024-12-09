@@ -12,6 +12,7 @@
 #define INPUT_BUFFER_SIZE 2048
 
 int main(int argc, char *argv[]) {
+    char *path_env = getenv("PATH");
     initializeEnvVariables();
     char inputBuffer[INPUT_BUFFER_SIZE];
     char **tokenizedCommandOutput;
@@ -37,41 +38,73 @@ int main(int argc, char *argv[]) {
             // fprintf(stdout, "Change directory\n");
             char *newPath = tokenizedCommandOutput[1];
             chdir(newPath);
-        }
-
-        if (strcmp(tokenizedCommandOutput[0], "pwd") == 0) {
+        } else if (strcmp(tokenizedCommandOutput[0], "pwd") == 0) {
             // fprintf(stdout, "Print working directory\n");
             char *currentDirectory = malloc(sizeof(char) * 2048);
             getcwd(currentDirectory, 2048);
             fprintf(stdout, "%s\n", currentDirectory);
             free(currentDirectory);
-        }
-
-        if (strcmp(tokenizedCommandOutput[0], "ls") == 0) {
+        } else if (strcmp(tokenizedCommandOutput[0], "ls") == 0) {
             char *currentDirectory = malloc(sizeof(char) * 2048);
             getcwd(currentDirectory, 2048);
             DIR *dir = opendir(currentDirectory);
 
             struct dirent *entry;
             while ((entry = readdir(dir)) != NULL) {
-                printf("%s\n", entry->d_name);
+                printf("%s ", entry->d_name);
             }
+            printf("\n");
 
             closedir(dir);
             free(currentDirectory);
-        }
-
-        if (strcmp(tokenizedCommandOutput[0], "echo") == 0) {
+        } else if (strcmp(tokenizedCommandOutput[0], "echo") == 0) {
             for (int i = 1; tokenizedCommandOutput[i] != NULL; i++) {
                 fprintf(stdout, "%s ", tokenizedCommandOutput[i]);
             }
             fprintf(stdout, "\n");
-        }
-        if (strcmp(tokenizedCommandOutput[0], "set") == 0) {
+        } else if (strcmp(tokenizedCommandOutput[0], "set") == 0) {
+            char *key = tokenizedCommandOutput[1];
+            // memmove(key, key + 1, strlen(key));
             setEnvVariable(tokenizedCommandOutput[1],
                            tokenizedCommandOutput[2]);
-        }
+        } else if (strcmp(tokenizedCommandOutput[0], "unset") == 0) {
+            deleteEnvVariable(tokenizedCommandOutput[1]);
 
+        } else {
+            char *path_copy = strdup(path_env);
+            char *dir = strtok(path_copy, ":");
+            int commandFound = 0;
+
+            while (dir != NULL) {
+                fprintf(stderr, "at: %i\n", __LINE__);
+                char full_path[2048];
+                snprintf(full_path, sizeof(full_path), "%s/%s", dir,
+                         tokenizedCommandOutput[0]);
+
+                if (access(full_path, X_OK) == 0) {
+                    fprintf(stderr, "Command found: %s at %s\n",
+                            tokenizedCommandOutput[0], full_path);
+                    commandFound = 1;
+                    pid_t pid = fork();
+                    if (pid == 0) {
+                        execve(full_path, tokenizedCommandOutput, NULL);
+                        perror("execve");
+                        exit(EXIT_FAILURE);
+                    } else {
+                        int status;
+                        waitpid(pid, &status, 0);
+                    }
+                    break;
+                }
+                dir = strtok(NULL, ":");
+            }
+            if (!commandFound) {
+                // fprintf(stderr, "Command not found: %s\n",
+                // tokenizedCommandOutput[0]);
+            }
+
+            free(path_copy);
+        }
         memset(inputBuffer, 0, sizeof(inputBuffer));
     }
     free(envVariableArray);

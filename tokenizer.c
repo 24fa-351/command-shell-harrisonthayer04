@@ -31,7 +31,7 @@ char **tokenize(char *commandBuffer, char *delimiter) {
         }
         if (checkForDollarSign(token)) {
             memmove(token, token + 1, strlen(token));
-            fprintf(stderr, "Token having removed the dollar sign: %s\n", token);
+            // fprintf(stderr, "Token having removed the dollar sign: %s\n", token);
             tokenizedCommand[numberOfTokens] = getEnvVariable(token);
         } else {
             strcpy(tokenizedCommand[numberOfTokens], token);
