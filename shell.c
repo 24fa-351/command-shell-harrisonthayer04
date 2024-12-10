@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,9 +8,35 @@
 #include <unistd.h>
 
 #include "envVariables.h"
+#include "parsers.h"
 #include "tokenizer.h"
 
 #define INPUT_BUFFER_SIZE 2048
+
+void outputToFile(char *filename, char *outputText) {
+    int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    FILE *fileStream = fdopen(fd, "w");
+    fprintf(fileStream, "%s\n", outputText);
+    fclose(fileStream);
+}
+
+char *concatenateArrayOfStringsIntoOneString(char *inputStrings[],
+                                             int numberOfStrings) {
+    size_t totalLength = 0;
+    for (int index = 0; index < numberOfStrings; index++) {
+        totalLength += strlen(inputStrings[index]);
+        totalLength += strlen(" ");
+    }
+    totalLength += 1;
+
+    char *output = (char *)malloc(totalLength);
+    output[0] = '\0';
+    for (int index = 0; index < numberOfStrings; index++) {
+        strcat(output, inputStrings[index]);
+        strcat(output, " ");
+    }
+    return output;
+}
 
 int main(int argc, char *argv[]) {
     char *path_env = getenv("PATH");
@@ -19,7 +46,7 @@ int main(int argc, char *argv[]) {
     while (1) {
         printf("xsh# ");
         if (fgets(inputBuffer, sizeof(inputBuffer), stdin) != NULL) {
-            fprintf(stdout, "You entered: %s\n", inputBuffer);
+            // fprintf(stdout, "You entered: %s\n", inputBuffer);
 
         } else {
             fprintf(stdout, "Try again");
@@ -30,6 +57,10 @@ int main(int argc, char *argv[]) {
             break;
         }
         tokenizedCommandOutput = tokenize(inputBuffer, " \t\n");
+        if (checkForGreaterThanSign(tokenizedCommandOutput)) {
+            fprintf(stderr, "Greater than sign found in input\n");
+        }
+
         /* for (int i = 0; tokenizedCommandOutput[i] != NULL; i++) {
             fprintf(stderr, "Token %d: %s\n", i, tokenizedCommandOutput[i]);
         } */
@@ -42,7 +73,15 @@ int main(int argc, char *argv[]) {
             // fprintf(stdout, "Print working directory\n");
             char *currentDirectory = malloc(sizeof(char) * 2048);
             getcwd(currentDirectory, 2048);
-            fprintf(stdout, "%s\n", currentDirectory);
+            if (checkForGreaterThanSign(tokenizedCommandOutput)) {
+                outputToFile(
+                    tokenizedCommandOutput
+                        [findGreaterThanSignIndex(tokenizedCommandOutput) + 1],
+                    currentDirectory);
+            } else {
+                fprintf(stdout, "%s\n", currentDirectory);
+            }
+
             free(currentDirectory);
         } else if (strcmp(tokenizedCommandOutput[0], "ls") == 0) {
             char *currentDirectory = malloc(sizeof(char) * 2048);
@@ -50,10 +89,31 @@ int main(int argc, char *argv[]) {
             DIR *dir = opendir(currentDirectory);
 
             struct dirent *entry;
-            while ((entry = readdir(dir)) != NULL) {
-                printf("%s ", entry->d_name);
+            if (checkForGreaterThanSign(tokenizedCommandOutput)) {
+                int numberOfEntriesInArray = 0;
+                char **entriesArray = malloc(sizeof(char *) * 1024);
+                while ((entry = readdir(dir)) != NULL) {
+                    entriesArray[numberOfEntriesInArray] =
+                        strdup(entry->d_name);
+                    numberOfEntriesInArray++;
+                }
+                char *lsOutput = concatenateArrayOfStringsIntoOneString(
+                    entriesArray, numberOfEntriesInArray);
+                outputToFile(
+                    tokenizedCommandOutput
+                        [findGreaterThanSignIndex(tokenizedCommandOutput) + 1],
+                    lsOutput);
+                free(lsOutput);
+                for (int index = 0; index < numberOfEntriesInArray; index++) {
+                    free(entriesArray[index]);
+                }
+                free(entriesArray);
+            } else {
+                while ((entry = readdir(dir)) != NULL) {
+                    fprintf(stdout, "%s ", entry->d_name);
+                }
+                printf("\n");
             }
-            printf("\n");
 
             closedir(dir);
             free(currentDirectory);
@@ -76,14 +136,14 @@ int main(int argc, char *argv[]) {
             int commandFound = 0;
 
             while (dir != NULL) {
-                fprintf(stderr, "at: %i\n", __LINE__);
+                // fprintf(stderr, "at: %i\n", __LINE__);
                 char full_path[2048];
                 snprintf(full_path, sizeof(full_path), "%s/%s", dir,
                          tokenizedCommandOutput[0]);
 
                 if (access(full_path, X_OK) == 0) {
-                    fprintf(stderr, "Command found: %s at %s\n",
-                            tokenizedCommandOutput[0], full_path);
+                    // fprintf(stderr, "Command found: %s at %s\n",
+                    // tokenizedCommandOutput[0], full_path);
                     commandFound = 1;
                     pid_t pid = fork();
                     if (pid == 0) {
@@ -99,8 +159,8 @@ int main(int argc, char *argv[]) {
                 dir = strtok(NULL, ":");
             }
             if (!commandFound) {
-                // fprintf(stderr, "Command not found: %s\n",
-                // tokenizedCommandOutput[0]);
+                fprintf(stderr, "Command not found: %s\n",
+                        tokenizedCommandOutput[0]);
             }
 
             free(path_copy);
