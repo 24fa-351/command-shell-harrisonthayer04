@@ -7,6 +7,6 @@ extern size_t numberOfEnvVariables;
 void initializeEnvVariables();
 void setEnvVariable(char *key, char *value);
 void deleteEnvVariable(char *key);
-char* getEnvVariable(char *key);
+char *getEnvVariable(char *key);
 
 #endif

@@ -1,7 +1,6 @@
 #include <stdbool.h>
-#include <string.h>
 #include <stdlib.h>
-
+#include <string.h>
 
 bool checkForDollarSign(char* token) {
     bool dollarSignPresent = false;
@@ -11,7 +10,7 @@ bool checkForDollarSign(char* token) {
     return dollarSignPresent;
 }
 
-bool checkForGreaterThanSign(char** tokenizedCommandOutput){
+bool checkForGreaterThanSign(char** tokenizedCommandOutput) {
     bool greaterThanSignPresent = false;
     for (int i = 0; tokenizedCommandOutput[i] != NULL; i++) {
         if (strcmp(tokenizedCommandOutput[i], ">") == 0) {
@@ -20,7 +19,7 @@ bool checkForGreaterThanSign(char** tokenizedCommandOutput){
     }
     return greaterThanSignPresent;
 }
-int findGreaterThanSignIndex(char** tokenizedCommandOutput){
+int findGreaterThanSignIndex(char** tokenizedCommandOutput) {
     int greaterThanSignIndex = -1;
     for (int i = 0; tokenizedCommandOutput[i] != NULL; i++) {
         if (strcmp(tokenizedCommandOutput[i], ">") == 0) {
@@ -28,4 +27,24 @@ int findGreaterThanSignIndex(char** tokenizedCommandOutput){
         }
     }
     return greaterThanSignIndex;
+}
+
+bool checkForLessThanSign(char** tokenizedCommandOutput) {
+    bool lessThanSignPresent = false;
+    for (int i = 0; tokenizedCommandOutput[i] != NULL; i++) {
+        if (strcmp(tokenizedCommandOutput[i], "<") == 0) {
+            return true;
+        }
+    }
+    return lessThanSignPresent;
+}
+
+int findLessThanSignIndex(char** tokenizedCommandOutput) {
+    int lessThanSignIndex = -1;
+    for (int i = 0; tokenizedCommandOutput[i] != NULL; i++) {
+        if (strcmp(tokenizedCommandOutput[i], "<") == 0) {
+            return i;
+        }
+    }
+    return lessThanSignIndex;
 }

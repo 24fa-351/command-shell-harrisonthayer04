@@ -11,7 +11,7 @@
 #include "parsers.h"
 #include "tokenizer.h"
 
-#define INPUT_BUFFER_SIZE 2048
+#define INPUT_BUFFER_SIZE 32768
 
 void outputToFile(char *filename, char *outputText) {
     int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -71,8 +71,8 @@ int main(int argc, char *argv[]) {
             chdir(newPath);
         } else if (strcmp(tokenizedCommandOutput[0], "pwd") == 0) {
             // fprintf(stdout, "Print working directory\n");
-            char *currentDirectory = malloc(sizeof(char) * 2048);
-            getcwd(currentDirectory, 2048);
+            char *currentDirectory = malloc(sizeof(char) * INPUT_BUFFER_SIZE);
+            getcwd(currentDirectory, INPUT_BUFFER_SIZE);
             if (checkForGreaterThanSign(tokenizedCommandOutput)) {
                 outputToFile(
                     tokenizedCommandOutput
@@ -84,8 +84,8 @@ int main(int argc, char *argv[]) {
 
             free(currentDirectory);
         } else if (strcmp(tokenizedCommandOutput[0], "ls") == 0) {
-            char *currentDirectory = malloc(sizeof(char) * 2048);
-            getcwd(currentDirectory, 2048);
+            char *currentDirectory = malloc(sizeof(char) * INPUT_BUFFER_SIZE);
+            getcwd(currentDirectory, INPUT_BUFFER_SIZE);
             DIR *dir = opendir(currentDirectory);
 
             struct dirent *entry;
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
 
             while (dir != NULL) {
                 // fprintf(stderr, "at: %i\n", __LINE__);
-                char full_path[2048];
+                char full_path[INPUT_BUFFER_SIZE];
                 snprintf(full_path, sizeof(full_path), "%s/%s", dir,
                          tokenizedCommandOutput[0]);
 
